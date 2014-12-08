@@ -1,0 +1,7 @@
+*.orig
+*.dll
+*.userprefs
+*.suo
+*.csproj.user
+X64-AutoPatcher/bin/*
+X64-AutoPatcher/obj/*
