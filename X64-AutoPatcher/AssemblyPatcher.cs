@@ -35,10 +35,9 @@ namespace X64AutoPatcher
                 {
                     if (methodDefinition.HasBody)
                     {
-
                         MethodBody methodBody = methodDefinition.Body;
                         ILProcessor processor = methodBody.GetILProcessor();
-                        bool warningAdded = false;
+                        bool methodPatched = false;
                         foreach (Instruction instruction in methodBody.Instructions.ToArray())
                         {
                             if (instruction.OpCode == OpCodes.Call)
@@ -48,6 +47,14 @@ namespace X64AutoPatcher
                                 {
                                     Console.WriteLine("64 bit check found in " + typeDefinition.Name + "." + methodDefinition.Name + ", fixing...!");
 
+                                    //Replace IntPtr.Size with 4
+                                    Instruction newInstruction = Instruction.Create(OpCodes.Ldc_I4_4);
+                                    processor.Replace(instruction, newInstruction);
+
+                                    typeChanged = true;
+                                    assemblyChanged = true;
+
+                                    //Add warning
                                     if (warningField == null)
                                     {
                                         warningField = new FieldDefinition("X64LogWarningPrinted", FieldAttributes.Public | FieldAttributes.Static | FieldAttributes.HasFieldRVA, typeDefinition.Module.Import(typeof(bool)));
@@ -55,9 +62,9 @@ namespace X64AutoPatcher
                                         typeDefinition.Fields.Add(warningField);
                                     }
 
-                                    if (!warningAdded)
+                                    if (!methodPatched)
                                     {
-                                        warningAdded = true;
+                                        methodPatched = true;
                                         Instruction first = methodBody.Instructions[0];
                                         Instruction boolLoad = Instruction.Create(OpCodes.Ldsfld, warningField);
                                         Instruction boolJumpCall = Instruction.Create(OpCodes.Brtrue, first);
@@ -93,17 +100,14 @@ namespace X64AutoPatcher
                                         */
                                     }
 
-                                    //Replace IntPtr.Size with 4
-                                    Instruction newInstruction = Instruction.Create(OpCodes.Ldc_I4_4);
-                                    processor.Replace(instruction, newInstruction);
 
-                                    //We need to calculate the position of the new instruction so jumps work correctly!
-                                    RecalculateOffsets(methodBody);
-
-                                    typeChanged = true;
-                                    assemblyChanged = true;
                                 }
                             }
+                        }
+                        if (methodPatched)
+                        {
+                            //We need to calculate the position of the new instruction so jumps work correctly!
+                            RecalculateOffsets(methodBody);
                         }
                     }
                 }
@@ -124,10 +128,23 @@ namespace X64AutoPatcher
         private static void RecalculateOffsets(MethodBody methodBody)
         {
             int currentPos = 0;
+            //Set previous and offsets
+            Instruction previous = null;
             foreach (Instruction instruction in methodBody.Instructions)
             {
+                instruction.Previous = previous;
                 instruction.Offset = currentPos;
                 currentPos += instruction.GetSize();
+                previous = instruction;
+            }
+            //Set nexts
+            Instruction[] flippedArray = methodBody.Instructions.ToArray();
+            Array.Reverse(flippedArray);
+            Instruction next = null;
+            foreach (Instruction instruction in flippedArray)
+            {
+                instruction.Next = next;
+                next = instruction;
             }
         }
 

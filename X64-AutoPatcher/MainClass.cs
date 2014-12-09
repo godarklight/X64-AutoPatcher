@@ -17,6 +17,7 @@ namespace X64AutoPatcher
             if (!isInKSPDir && !isInGameDataDir)
             {
                 Console.WriteLine("Please place this executable in KSP's root folder or GameData folder.");
+                AskToExit();
                 return;
             }
             string kspPathDir = ourPath;
@@ -33,10 +34,18 @@ namespace X64AutoPatcher
             Console.WriteLine(gameDataDir);
             if (!CecilReflector.LoadCecil(kspPathDir))
             {
-                Console.WriteLine("Mono.Cecil not found at ");
+                Console.WriteLine("Mono.Cecil not found!");
+                AskToExit();
                 return;
             }
             AssemblyPatcher.PatchFiles(gameDataDir);
+            AskToExit();
+        }
+
+        private static void AskToExit()
+        {
+            Console.WriteLine("Press any key to exit");
+            Console.ReadKey();
         }
     }
 }

@@ -8,6 +8,7 @@ namespace X64AutoPatcher
     {
         public static bool LoadCecil(string kspPathDir)
         {
+            AppDomain.CurrentDomain.AssemblyResolve += HandleAssemblyResolve;
             string monoCecilPath = Path.Combine(Path.Combine(kspPathDir, "KSP_Data"), "Managed");
             if (!Directory.Exists(monoCecilPath))
             {
@@ -27,6 +28,20 @@ namespace X64AutoPatcher
                 }
             }
             return true;
+        }
+
+        private static Assembly HandleAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            //This will find and return the assembly requested if it is already loaded
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (assembly.FullName == args.Name)
+                {
+                    Console.WriteLine("Resolved " + args.Name);
+                    return assembly;
+                }
+            }
+            return null;
         }
     }
 }
